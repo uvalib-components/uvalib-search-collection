@@ -1,0 +1,257 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../uvalib-catalog/uvalib-catalog.html">
+<link rel="import" href="../uvalib-articles/uvalib-articles.html">
+<link rel="import" href="../uvalib-helper-libs/lodash.html">
+
+<!--
+An element that merges faceted searches of articles and catalog from Virgo.
+
+Example:
+
+    <uvalib-search-collection></uvalib-search-collection>
+
+Example:
+
+    <uvalib-search-collection auto></uvalib-search-collection>
+
+@demo demo/index.html
+@hero hero.svg
+-->
+
+<dom-module id="uvalib-search-collection">
+  <template>
+    <uvalib-catalog query="[[query]]" id="catalog" auto="{{auto}}" items="{{catalogitems}}" on-response="_catalogResponse" loading="{{catalogLoading}}"></uvalib-catalog>
+    <uvalib-articles query="[[query]]" id="articles" auto="{{auto}}" items="{{articleItems}}" on-response="_articlesResponse" loading="{{articlesLoading}}"></uvalib-articles>
+  </template>
+
+  <script>
+  (function() {
+    Polymer({
+      is: 'uvalib-search-collection',
+
+      properties: {
+        activeRequests: {
+          type: Array,
+          notify: true,
+          readOnly: true,
+          value: function() {
+            return [];
+          }
+        },
+
+        /**
+         * If true, automatically performs an Ajax request when either `url` or
+         * `params` changes.
+         */
+        auto: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * Length of time in milliseconds to debounce multiple automatically generated requests.
+         */
+        debounceDuration: {
+          type: Number,
+          value: 0,
+          notify: true
+        },
+
+        /**
+         * Filter definition for facet search
+         */
+
+        filters: {
+          type: Array,
+          notify: true,
+          value:  function(){ return []}
+        },
+
+        /**
+         * The items from the Catalog request, in a normalized/simplified Format
+         */
+        items: {
+          type: Array,
+          notify: true,
+          readOnly: true
+        },
+
+        /**
+         * The query string of the search
+         */
+        query: {
+          type: String,
+          notify: true,
+          value: "",
+          observer: "_queryChanged"
+        },
+
+        /**
+         * Set the timeout flag on the request.
+         */
+        timeout: {
+          type: Number,
+          value: 0
+        },
+
+        /**
+         * If true, error messages will automatically be logged to the console.
+         */
+        verbose: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * True while lastRequest is in flight.
+         */
+        loading: {
+          type: Boolean,
+          computed: '_both(catalogLoading,articlesLoading)'
+        },
+
+        _url: {
+          type: String,
+          value: "http://api.library.virginia.edu/"
+        },
+
+        _params: {
+          type: Object,
+          value: {q:''},
+          notify: true
+        },
+
+        _items: {
+          type: Array,
+          value: []
+        },
+
+        selectedFilters: {
+          type: Object,
+          value: {},
+          notify: true,
+          observer: "_selectedFiltersChanged"
+        }
+
+      },
+
+      // Element Lifecycle
+
+      ready: function() {
+        // `ready` is called after all elements have been configured, but
+        // propagates bottom-up. This element's children are ready, but parents
+        // are not.
+        //
+        // This is the point where you should make modifications to the DOM (when
+        // necessary), or kick off any processes the element wants to perform.
+        this.generateRequest();
+      },
+
+      attached: function() {
+        // `attached` fires once the element and its parents have been inserted
+        // into a document.
+        //
+        // This is a good place to perform any work related to your element's
+        // visual state or active behavior (measuring sizes, beginning animations,
+        // loading resources, etc).
+      },
+
+      detached: function() {
+        // The analog to `attached`, `detached` fires when the element has been
+        // removed from a document.
+        //
+        // Use this to clean up anything you did in `attached`.
+      },
+
+      _both: function(a,b){
+        return (a || b);
+      },
+      _handleError: function(){
+        this.fire('error');
+      },
+      _handleRequest: function(){
+        this.fire('request');
+      },
+      _handleResponse: function(){
+        this.fire('response');
+      },
+      _queryChanged: function(){
+        if (this._params) {
+          this.set('_params.q', this.query);
+        }
+      },
+      _catalogResponse: function(){
+        this._filtersJoin(this.$.catalog.getFilters());
+        this._itemsJoin(this.catalogitems);
+      },
+      _articlesResponse: function(){
+        this._filtersJoin(this.$.articles.getFilters());
+        this._itemsJoin(this.articleItems);
+      },
+      _filtersJoin: function(fltrs){
+        fltrs.forEach(function(filt){
+          var filter = _.find(this.filters,{id:filt.id});
+          if (filter) {
+            // found a matching filter, combine values
+            filt.values.forEach(function(val){
+              var value = _.find(filter.values,{id:val.id});
+              if (value) {
+                value.count = value.count+val.count;
+              } else {
+                filter.values.push(val);
+              }
+            }, this);
+            // sort values now
+            filter.values = _.orderBy(filter.values, 'count', 'desc');
+          } else {
+            this.push('filters', filt);
+          }
+        }, this);
+
+      },
+      _itemsJoin: function(items){
+        // come up with a better way to join these!!!!
+        // something like this:
+        // get ratio and inject smaller set into larger
+        // keeping a buffer for the next page of results
+        // after the buffer reaches a limit then start skipping page requests
+        // until it comes back down.
+        this._items = _.shuffle(this._items.concat(items));
+        if (!this.loading)
+          this._setItems(this._items);
+      },
+      getItem: function(id){
+        return _.find(this.items, {'id':id});
+      },
+      generateRequest: function(){
+          this._items = [];
+          this.filters = []; //this.items = [];
+          this.$.catalog.generateRequest();
+          this.$.articles.generateRequest();
+      },
+      _selectedFiltersChanged: function(newValue, oldValue){
+        if (_.isEmpty(newValue) && _.isEmpty(oldValue)) return;
+        console.log('selected filters changed');
+        //this.items = [];
+        var catalog = this.$.catalog,
+            articles = this.$.articles;
+
+        //this.items = [];
+        this._items = [];
+        this.filters = [];
+        if (catalog.areFiltersAvailable(this.selectedFilters)) {
+          catalog.setSelectedFilters(this.selectedFilters);
+          catalog.generateRequest();
+        }
+        if (articles.areFiltersAvailable(this.selectedFilters)) {
+          articles.setSelectedFilters(this.selectedFilters);
+          articles.generateRequest();
+        }
+
+      }
+
+
+    });
+  })();
+  </script>
+</dom-module>

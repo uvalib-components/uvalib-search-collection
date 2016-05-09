@@ -137,7 +137,7 @@ Example:
 
         _params: {
           type: Object,
-          value: {q:''},
+          value: {q:'', per_page:10, page:1},
           notify: true
         },
 
@@ -281,6 +281,25 @@ Example:
 
       }
 
+      _rowsChanged: function() {
+        if (this._params) {
+          this.set('params.per_page', this.rows);
+        }
+      }
+
+      _pageChanged: function() {
+        if (this._params) {
+          this.set('_params.page', this.page);
+        }
+      }
+
+      /**
+       * Get the next page of the search results.
+       */
+      more: function() {
+        this.auto = true;
+        this.page += 1;
+      }
 
     });
   })();

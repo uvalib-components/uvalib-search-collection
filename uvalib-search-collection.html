@@ -110,6 +110,26 @@ Example:
           computed: '_both(catalogLoading,articlesLoading)'
         },
 
+        /**
+         * The number of rows to return to items.
+         */
+        rows: {
+          type: Number,
+          notify: true,
+          value: 10,
+          observer: '_rowsChanged'
+        }
+
+        /**
+         * The page of results to return to items.
+         */
+        page: {
+          type: Number,
+          notify: true,
+          value: 1,
+          observer: '_pageChanged'
+        }
+
         _url: {
           type: String,
           value: "http://api.library.virginia.edu/"
@@ -166,28 +186,35 @@ Example:
       _both: function(a,b){
         return (a || b);
       },
+
       _handleError: function(){
         this.fire('error');
       },
+
       _handleRequest: function(){
         this.fire('request');
       },
+
       _handleResponse: function(){
         this.fire('response');
       },
+
       _queryChanged: function(){
         if (this._params) {
           this.set('_params.q', this.query);
         }
       },
+
       _catalogResponse: function(){
         this._filtersJoin(this.$.catalog.getFilters());
         this._itemsJoin(this.catalogitems);
       },
+
       _articlesResponse: function(){
         this._filtersJoin(this.$.articles.getFilters());
         this._itemsJoin(this.articleItems);
       },
+
       _filtersJoin: function(fltrs){
         fltrs.forEach(function(filt){
           var filter = _.find(this.filters,{id:filt.id});
@@ -209,6 +236,7 @@ Example:
         }, this);
 
       },
+
       _itemsJoin: function(items){
         // come up with a better way to join these!!!!
         // something like this:
@@ -220,15 +248,18 @@ Example:
         if (!this.loading)
           this._setItems(this._items);
       },
+
       getItem: function(id){
         return _.find(this.items, {'id':id});
       },
+
       generateRequest: function(){
           this._items = [];
           this.filters = []; //this.items = [];
           this.$.catalog.generateRequest();
           this.$.articles.generateRequest();
       },
+
       _selectedFiltersChanged: function(newValue, oldValue){
         if (_.isEmpty(newValue) && _.isEmpty(oldValue)) return;
         console.log('selected filters changed');

@@ -116,9 +116,9 @@ Example:
         rows: {
           type: Number,
           notify: true,
-          value: 10,
+          value: 20,
           observer: '_rowsChanged'
-        }
+        },
 
         /**
          * The page of results to return to items.
@@ -128,7 +128,7 @@ Example:
           notify: true,
           value: 1,
           observer: '_pageChanged'
-        }
+        },
 
         _url: {
           type: String,
@@ -279,26 +279,43 @@ Example:
           articles.generateRequest();
         }
 
-      }
+      },
 
       _rowsChanged: function() {
-        if (this._params) {
-          this.set('params.per_page', this.rows);
+        // Make sure at least one item from each source is returned.
+        if (this.rows < 2) {
+          this.rows = 2;
         }
-      }
+        if (this.rows > (this.$.catalog.count + this.$.articles.count)) {
+          this.rows = this.$.catalog.count + this.$.articles.count;
+        }
+        if (this._params) {
+          this.set('params.per_page', Math.floor(this.rows/2));
+        }
+      },
 
       _pageChanged: function() {
+        // Make sure a negative value does not occur.
+        if (this.page < 0) {
+          this.page = 0;
+        }
         if (this._params) {
           this.set('_params.page', this.page);
         }
-      }
+      },
 
       /**
        * Get the next page of the search results.
        */
       more: function() {
-        this.auto = true;
         this.page += 1;
+        var rowsRetrieved = (this.page * this.$.catalog.rows) + (this.page * this.$.articles.rows);
+        if (rowsRetrieved < (this.$.catalog.count + this.$.articles.count)) {
+          this.page += 1;
+          if (! this.auto) {
+            this.generateRequest();
+          }
+        }
       }
 
     });

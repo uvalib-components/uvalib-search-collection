@@ -20,7 +20,7 @@ Example:
 
 <dom-module id="uvalib-search-collection">
   <template>
-    <uvalib-catalog query="[[query]]" id="catalog" auto="{{auto}}" items="{{catalogitems}}" on-response="_catalogResponse" loading="{{catalogLoading}}"></uvalib-catalog>
+    <uvalib-catalog query="[[query]]" id="catalog" auto="{{auto}}" items="{{catalogItems}}" on-response="_catalogResponse" loading="{{catalogLoading}}"></uvalib-catalog>
     <uvalib-articles query="[[query]]" id="articles" auto="{{auto}}" items="{{articleItems}}" on-response="_articlesResponse" loading="{{articlesLoading}}"></uvalib-articles>
   </template>
 
@@ -68,10 +68,37 @@ Example:
         },
 
         /**
-         * The items from the Catalog request, in a normalized/simplified Format
+         * The combined items from the both Catalog and Article requests.
          */
         items: {
           type: Array,
+          notify: true,
+          readOnly: true
+        },
+
+        /**
+         * The items from the Catalog request.
+         */
+        catalogItems: {
+          type: Array,
+          notify: true,
+          readOnly: true
+        },
+
+        /**
+         * The items from the Article request.
+         */
+        articleItems: {
+          type: Array,
+          notify: true,
+          readOnly: true
+        },
+
+        /**
+         * Total number of results in the last response ***(not just the returned rows)***
+         */
+        count: {
+          type: Number,
           notify: true,
           readOnly: true
         },
@@ -111,6 +138,22 @@ Example:
         },
 
         /**
+         * True while the last catalog request is in flight.
+         */
+        catalogLoading: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * True while last article request is in flight.
+         */
+        articlesLoading: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
          * The number of rows to return to items.
          */
         rows: {
@@ -130,22 +173,36 @@ Example:
           observer: '_pageChanged'
         },
 
+        /**
+         * The base url used to make requests to the catalog. ***This should change when we are no longer using the proxy for CORS support***
+         */
         _url: {
           type: String,
           value: "http://api.library.virginia.edu/"
         },
 
+        /**
+         * The parameters to pass to the catalog api (as GET parameters)
+         * See https://confluence.lib.virginia.edu/pages/viewpage.action?pageId=13763696 for api
+         */
         _params: {
           type: Object,
           value: {q:'', per_page:10, page:1},
           notify: true
         },
 
+        /**
+         * Items from one of the search sources.
+         */
         _items: {
           type: Array,
-          value: []
+          value: [],
+          observer: "_itemsChanged"
         },
 
+        /**
+         * The filters selected to limit the search results displayed.
+         */
         selectedFilters: {
           type: Object,
           value: {},
@@ -183,6 +240,12 @@ Example:
         // Use this to clean up anything you did in `attached`.
       },
 
+      /**
+       * Returns the boolean result for **a OR b**.
+       *
+       * @param {Boolean} a
+       * @param {Boolean} a
+       */
       _both: function(a,b){
         return (a || b);
       },
@@ -199,22 +262,70 @@ Example:
         this.fire('response');
       },
 
+      /**
+       * Update the AJAX query API parameter when the query property is changed.
+       */
       _queryChanged: function(){
         if (this._params) {
           this.set('_params.q', this.query);
         }
       },
 
-      _catalogResponse: function(){
-        this._filtersJoin(this.$.catalog.getFilters());
-        this._itemsJoin(this.catalogitems);
+      /**
+       * Update the AJAX per_page API parameter when the rows property is changed.
+       */
+      _rowsChanged: function() {
+        // Make sure at least one item from each source is returned.
+        if (this.rows < 2) {
+          this.rows = 2;
+        }
+        if ((this.$.catalog.count > 0) || (this.$.articles.count > 0)) {
+          if (this.rows > (this.count)) {
+            this.rows = this.count;
+          }
+        }
+        if (this._params) {
+          this.set('_params.per_page', Math.floor(this.rows/2));
+        }
       },
 
+      /**
+       * Update the AJAX page API parameter when the page property is changed.
+       */
+      _pageChanged: function() {
+        // Make sure a negative value does not occur.
+        if (this.page < 0) {
+          this.page = 0;
+        }
+        if (this._params) {
+          this.set('_params.page', this.page);
+        }
+      },
+
+      /**
+       * When the catalog search returns a response, incorporate the results into the
+       * `items` and `filters`.
+       */
+      _catalogResponse: function(){
+        this._filtersJoin(this.$.catalog.getFilters());
+        this._itemsJoin(this.catalogItems);
+      },
+
+      /**
+       * When the article search returns a response, incorporate the results into the
+       * `items` and `filters`.
+       */
       _articlesResponse: function(){
         this._filtersJoin(this.$.articles.getFilters());
         this._itemsJoin(this.articleItems);
       },
 
+      /**
+       * Combine the filters returned from the searches so that a filter only appears once
+       * and sort the filters such that those that are most frequent are at the top.
+       *
+       * @param {Array} fltrs
+       */
       _filtersJoin: function(fltrs){
         fltrs.forEach(function(filt){
           var filter = _.find(this.filters,{id:filt.id});
@@ -237,6 +348,11 @@ Example:
 
       },
 
+      /**
+       * Join the catalog and article search results to populate the `items`.
+       *
+       * @param {Array} items - The items from an API search call.
+       */
       _itemsJoin: function(items){
         // come up with a better way to join these!!!!
         // something like this:
@@ -249,10 +365,25 @@ Example:
           this._setItems(this._items);
       },
 
+      /**
+       * When the items are changed, update the `count`.
+       */
+      _itemsChanged: function() {
+        this.count = this.$.catalog.count + this.$.articles.count;
+      },
+
+      /**
+       * Get an item's details
+       *
+       * @param {String} id - The unique identifier for the catalog or article item.
+       */
       getItem: function(id){
         return _.find(this.items, {'id':id});
       },
 
+      /**
+       * Generate an AJAX request to get catalog and article items based on the query.
+       */
       generateRequest: function(){
           this._items = [];
           this.filters = []; //this.items = [];
@@ -260,6 +391,12 @@ Example:
           this.$.articles.generateRequest();
       },
 
+      /**
+       * Filters uses to restrict the search results have changed.
+       *
+       * @param {Object} newValue
+       * @param {Object} oldValue
+       */
       _selectedFiltersChanged: function(newValue, oldValue){
         if (_.isEmpty(newValue) && _.isEmpty(oldValue)) return;
         console.log('selected filters changed');
@@ -281,36 +418,12 @@ Example:
 
       },
 
-      _rowsChanged: function() {
-        // Make sure at least one item from each source is returned.
-        if (this.rows < 2) {
-          this.rows = 2;
-        }
-        if (this.rows > (this.$.catalog.count + this.$.articles.count)) {
-          this.rows = this.$.catalog.count + this.$.articles.count;
-        }
-        if (this._params) {
-          this.set('params.per_page', Math.floor(this.rows/2));
-        }
-      },
-
-      _pageChanged: function() {
-        // Make sure a negative value does not occur.
-        if (this.page < 0) {
-          this.page = 0;
-        }
-        if (this._params) {
-          this.set('_params.page', this.page);
-        }
-      },
-
       /**
        * Get the next page of the search results.
        */
       more: function() {
-        this.page += 1;
         var rowsRetrieved = (this.page * this.$.catalog.rows) + (this.page * this.$.articles.rows);
-        if (rowsRetrieved < (this.$.catalog.count + this.$.articles.count)) {
+        if (rowsRetrieved < (this.count)) {
           this.page += 1;
           if (! this.auto) {
             this.generateRequest();

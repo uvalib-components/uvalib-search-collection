@@ -1,4 +1,4 @@
-# uvalib-search-collection
+# uvalib-search-collection [![Build Status](https://travis-ci.org/uvalib-components/uvalib-search-collection.svg?branch=master)](https://travis-ci.org/uvalib-components/uvalib-search-collection)
 
 An element providing a starting point for your own reusable Polymer elements.
 

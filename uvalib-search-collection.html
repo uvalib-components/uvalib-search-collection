@@ -20,8 +20,8 @@ Example:
 
 <dom-module id="uvalib-search-collection">
   <template>
-    <uvalib-catalog query="[[query]]" id="catalog" auto="{{auto}}" items="{{catalogItems}}" on-response="_catalogResponse" loading="{{catalogLoading}}"></uvalib-catalog>
-    <uvalib-articles query="[[query]]" id="articles" auto="{{auto}}" items="{{articleItems}}" on-response="_articlesResponse" loading="{{articlesLoading}}"></uvalib-articles>
+    <uvalib-catalog query="[[query]]" id="catalog" auto="{{auto}}" items="{{catalogItems}}" on-response="_catalogResponse" loading="{{catalogLoading}}" last-error="{{_lastCatalogError}}"></uvalib-catalog>
+    <uvalib-articles query="[[query]]" id="articles" auto="{{auto}}" items="{{articleItems}}" on-response="_articlesResponse" loading="{{articlesLoading}}" last-error="{{_lastArticlesError}}"></uvalib-articles>
   </template>
 
   <script>
@@ -151,6 +151,27 @@ Example:
           value: false
         },
 
+        _lastCatalogError: {
+          type: Object,
+          notify: true
+        },
+        _lastArticlesError: {
+          type: Object,
+          nodify: true
+        },
+
+        /**
+         * lastRequest's error, if any.
+         *
+         * @type {Object}
+         */
+        lastError: {
+          type: Object,
+          notify: true,
+          computed: '_computeErrors(loading)'
+        },
+
+
         /**
          * The number of rows to return to items.
          */
@@ -236,6 +257,16 @@ Example:
         // removed from a document.
         //
         // Use this to clean up anything you did in `attached`.
+      },
+
+      _computeErrors: function(){
+        if (this._lastCatalogError || this._lastArticlesError) {
+          return {articles:this._lastArticlesError,
+                  catalog:this._lastCatalogError};
+        }
+        else {
+          return null;
+        }
       },
 
       /**

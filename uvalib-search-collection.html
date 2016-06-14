@@ -430,18 +430,16 @@ Example:
       _selectedFiltersChanged: function(newValue, oldValue){
         if (_.isEmpty(newValue) && _.isEmpty(oldValue)) return;
         console.log('selected filters changed');
-        //this.items = [];
         var catalog = this.$.catalog,
             articles = this.$.articles;
 
-        //this.items = [];
         this._items = [];
         this.filters = [];
-        if (catalog.areFiltersAvailable(this.selectedFilters)) {
+        if ( !(catalog.lastRequest) || catalog.areFiltersAvailable(this.selectedFilters) ) {
           catalog.setSelectedFilters(this.selectedFilters);
           catalog.generateRequest();
         }
-        if (articles.areFiltersAvailable(this.selectedFilters)) {
+        if ( !(articles.lastRequest) || articles.areFiltersAvailable(this.selectedFilters) ) {
           articles.setSelectedFilters(this.selectedFilters);
           articles.generateRequest();
         }

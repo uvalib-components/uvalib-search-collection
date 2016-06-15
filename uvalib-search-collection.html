@@ -363,7 +363,7 @@ Example:
         // keeping a buffer for the next page of results
         // after the buffer reaches a limit then start skipping page requests
         // until it comes back down.
-        this._items = _.shuffle(this._items.concat(items));
+        this._items = _.shuffle(this._items.concat(items)).slice(0,this.rows);
         if (!this.loading)
           this._setItems(this._items);
       },
@@ -410,11 +410,11 @@ Example:
         this.filters = [];
         if ( catalog.areFiltersAvailable(this.selectedFilters) ) {
           catalog.setSelectedFilters(this.selectedFilters);
-          catalog.generateRequest();
+//          catalog.generateRequest();
         }
         if ( articles.areFiltersAvailable(this.selectedFilters) ) {
           articles.setSelectedFilters(this.selectedFilters);
-          articles.generateRequest();
+//          articles.generateRequest();
         }
 
       },

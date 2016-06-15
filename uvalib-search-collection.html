@@ -132,7 +132,7 @@ Example:
          */
         loading: {
           type: Boolean,
-          computed: '_both(catalogLoading,articlesLoading)'
+          computed: '_either(catalogLoading,articlesLoading)'
         },
 
         /**
@@ -275,7 +275,7 @@ Example:
        * @param {Boolean} a
        * @param {Boolean} a
        */
-      _both: function(a,b){
+      _either: function(a,b){
         return (a || b);
       },
 
@@ -435,11 +435,11 @@ Example:
 
         this._items = [];
         this.filters = [];
-        if ( !(catalog.lastRequest) || catalog.areFiltersAvailable(this.selectedFilters) ) {
+        if ( catalog.areFiltersAvailable(this.selectedFilters) ) {
           catalog.setSelectedFilters(this.selectedFilters);
           catalog.generateRequest();
         }
-        if ( !(articles.lastRequest) || articles.areFiltersAvailable(this.selectedFilters) ) {
+        if ( articles.areFiltersAvailable(this.selectedFilters) ) {
           articles.setSelectedFilters(this.selectedFilters);
           articles.generateRequest();
         }

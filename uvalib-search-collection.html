@@ -20,8 +20,8 @@ Example:
 
 <dom-module id="uvalib-search-collection">
   <template>
-    <uvalib-catalog query="[[query]]" id="catalog" auto="{{auto}}" items="{{catalogItems}}" on-response="_catalogResponse" loading="{{catalogLoading}}" last-error="{{_lastCatalogError}}"></uvalib-catalog>
-    <uvalib-articles query="[[query]]" id="articles" auto="{{auto}}" items="{{articleItems}}" on-response="_articlesResponse" loading="{{articlesLoading}}" last-error="{{_lastArticlesError}}"></uvalib-articles>
+    <uvalib-catalog debounce-duration="[[debounceDuration]]" query="[[query]]" id="catalog" auto="{{auto}}" items="{{catalogItems}}" on-response="_catalogResponse" loading="{{catalogLoading}}" last-error="{{_lastCatalogError}}"></uvalib-catalog>
+    <uvalib-articles debounce-duration="[[debounceDuration]]" query="[[query]]" id="articles" auto="{{auto}}" items="{{articleItems}}" on-response="_articlesResponse" loading="{{articlesLoading}}" last-error="{{_lastArticlesError}}"></uvalib-articles>
   </template>
 
   <script>

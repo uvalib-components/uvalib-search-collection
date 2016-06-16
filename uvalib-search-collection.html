@@ -394,6 +394,16 @@ Example:
           this.$.articles.generateRequest();
       },
 
+      _articleFilterCleanup: function(filters){
+        // if format = Articles then remove as every result matches
+        if (filters.format) {
+          if(typeof filters.format === 'string' || filters.format instanceof String)
+            filters.format = [filters.format];
+          filters.format = _.pull(filters.format, 'Article','article');
+        }
+        return filters;
+      },
+
       /**
        * Filters uses to restrict the search results have changed.
        *
@@ -412,7 +422,7 @@ Example:
           catalog.setSelectedFilters(this.selectedFilters);
 //        }
 //        if ( articles.areFiltersAvailable(this.selectedFilters) ) {
-          articles.setSelectedFilters(this.selectedFilters);
+          articles.setSelectedFilters(this._articleFilterCleanup(this.selectedFilters));
 //        }
 
       },

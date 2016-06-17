@@ -20,8 +20,8 @@ Example:
 
 <dom-module id="uvalib-search-collection">
   <template>
-    <uvalib-catalog debounce-duration="[[debounceDuration]]" query="[[query]]" id="catalog" auto="{{auto}}" items="{{catalogItems}}" on-response="_catalogResponse" loading="{{catalogLoading}}" last-error="{{_lastCatalogError}}"></uvalib-catalog>
-    <uvalib-articles debounce-duration="[[debounceDuration]]" query="[[query]]" id="articles" auto="{{auto}}" items="{{articleItems}}" on-response="_articlesResponse" loading="{{articlesLoading}}" last-error="{{_lastArticlesError}}"></uvalib-articles>
+    <uvalib-catalog rows="{{rows}}" debounce-duration="[[debounceDuration]]" query="[[query]]" id="catalog" auto="{{auto}}" items="{{catalogItems}}" on-response="_catalogResponse" loading="{{catalogLoading}}" last-error="{{_lastCatalogError}}"></uvalib-catalog>
+    <uvalib-articles rows="{{rows}}" debounce-duration="[[debounceDuration]]" query="[[query]]" id="articles" auto="{{auto}}" items="{{articleItems}}" on-response="_articlesResponse" loading="{{articlesLoading}}" last-error="{{_lastArticlesError}}"></uvalib-articles>
   </template>
 
   <script>
@@ -178,7 +178,7 @@ Example:
          */
         rows: {
           type: Number,
-          notify: true,
+//          notify: true,
           value: 20,
           observer: '_rowsChanged'
         },
@@ -199,16 +199,6 @@ Example:
         _url: {
           type: String,
           value: "http://api.library.virginia.edu/"
-        },
-
-        /**
-         * The parameters to pass to the catalog api (as GET parameters)
-         * See https://confluence.lib.virginia.edu/pages/viewpage.action?pageId=13763696 for api
-         */
-        _params: {
-          type: Object,
-          value: {q:'', per_page:10, page:1},
-          notify: true
         },
 
         /**
@@ -270,24 +260,6 @@ Example:
       _queryChanged: function(){
         if (this._params) {
           this.set('_params.q', this.query);
-        }
-      },
-
-      /**
-       * Update the AJAX per_page API parameter when the rows property is changed.
-       */
-      _rowsChanged: function() {
-        // Make sure at least one item from each source is returned.
-        if (this.rows < 2) {
-          this.rows = 2;
-        }
-        if ((this.$.catalog.count > 0) || (this.$.articles.count > 0)) {
-          if (this.rows > (this.count)) {
-            this.rows = this.count;
-          }
-        }
-        if (this._params) {
-          this.set('_params.per_page', Math.floor(this.rows/2));
         }
       },
 
@@ -363,7 +335,7 @@ Example:
         // keeping a buffer for the next page of results
         // after the buffer reaches a limit then start skipping page requests
         // until it comes back down.
-        this._items = _.shuffle(this._items.concat(items)).slice(0,this.rows);
+        this._items = this._items.concat(items).slice(0,this.rows);
         if (!this.loading)
           this._setItems(this._items);
       },
@@ -419,10 +391,10 @@ Example:
         this._items = [];
         this.filters = [];
 //        if ( catalog.areFiltersAvailable(this.selectedFilters) ) {
-          catalog.setSelectedFilters(this.selectedFilters);
+          catalog.selectedFilters = this.selectedFilters;
 //        }
 //        if ( articles.areFiltersAvailable(this.selectedFilters) ) {
-          articles.setSelectedFilters(this._articleFilterCleanup(this.selectedFilters));
+          articles.selectedFilters = this.selectedFilters;
 //        }
 
       },

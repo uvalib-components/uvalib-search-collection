@@ -14,16 +14,17 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
     <title>uvalib-search-collection Demo</title>
     <script src="../../webcomponentsjs/webcomponents-lite.min.js"></script>
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
     <link rel="import" href="../uvalib-search-collection.html">
   </head>
   <body unresolved>
-<!--
+
 <demo-snippet>
   <template>
--->
+
     <template is="dom-bind" id="app">
 
-      <uvalib-search-collection selected-filters="{{selectedFacets}}" auto items="{{items}}"></uvalib-search-collection>
+      <uvalib-search-collection rows="20" selected-filters='{"format":["Book"]}' auto items="{{items}}"></uvalib-search-collection>
       <ul>
         <template is="dom-repeat" items="{{items}}">
           <li>{{item.title}}</li>
@@ -31,14 +32,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       </ul>
 
     </template>
-<!--
+
   </template>
 </demo-snippet>
--->
-    <script>
-      var app = document.querySelector('#app');
-//      app.selectedFacets = {'format':['Book'],'library':{'inclusive':['Alderman','Astronomy','Biology & Psychology','Chemistry','Darden Business School','Ivy','Ivy Stacks','Mathematics','Physics','Special Collections','Law School','Fine Arts','Brown Sel','Clemons','Health Sciences','Music']}};
-      app.selectedFacets = {'format':'Article'};
-    </script>
+
   </body>
 </html>

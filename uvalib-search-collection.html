@@ -227,7 +227,7 @@ Example:
           type: Object,
           notify: true,
           readOnly: true,
-          computed: "_computeItem(items, itemId)"
+          computed: "_computeItem(itemId)"
         },
 
         /**
@@ -242,8 +242,8 @@ Example:
 
       },
 
-      _computeItem: function(items, id){
-        return this.getItem(id, true);  // return the cached item
+      _computeItem: function(itemId){
+        return this.getItem(itemId, true);  // return the cached item
       },
 
       /**

@@ -229,7 +229,7 @@ Example:
        */
       cacheItem: function(id){
         var item = this.getItem(id);
-        if (item) localStorage.['uvalib-search-collection:'+id] = JSON.stringify(item);
+        if (item) localStorage['uvalib-search-collection:'+id] = JSON.stringify(item);
       },
 
       _computeErrors: function(){

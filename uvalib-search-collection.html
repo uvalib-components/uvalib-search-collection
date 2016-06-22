@@ -20,8 +20,8 @@ Example:
 
 <dom-module id="uvalib-search-collection">
   <template>
-    <uvalib-catalog rows="{{rows}}" debounce-duration="[[debounceDuration]]" query="[[query]]" id="catalog" auto="{{auto}}" items="{{catalogItems}}" on-response="_catalogResponse" loading="{{catalogLoading}}" last-error="{{_lastCatalogError}}"></uvalib-catalog>
-    <uvalib-articles rows="{{rows}}" debounce-duration="[[debounceDuration]]" query="[[query]]" id="articles" auto="{{auto}}" items="{{articleItems}}" on-response="_articlesResponse" loading="{{articlesLoading}}" last-error="{{_lastArticlesError}}"></uvalib-articles>
+    <uvalib-catalog item-id="{{itemId}}" rows="{{rows}}" debounce-duration="[[debounceDuration]]" query="[[query]]" id="catalog" auto="{{auto}}" items="{{catalogItems}}" on-response="_catalogResponse" loading="{{catalogLoading}}" last-error="{{_lastCatalogError}}"></uvalib-catalog>
+    <uvalib-articles item-id="{{itemId}}" rows="{{rows}}" debounce-duration="[[debounceDuration]]" query="[[query]]" id="articles" auto="{{auto}}" items="{{articleItems}}" on-response="_articlesResponse" loading="{{articlesLoading}}" last-error="{{_lastArticlesError}}"></uvalib-articles>
   </template>
 
   <script>
@@ -211,6 +211,26 @@ Example:
         },
 
         /**
+         * The id of the item
+         */
+        itemId: {
+          type: String,
+          value: null
+        },
+
+        /**
+         * The first item returned from the Search Collection request items array
+         *
+         * @type {Object}
+         */
+        item: {
+          type: Object,
+          notify: true,
+          readOnly: true,
+          computed: "computeItem(items, itemId)"
+        },
+
+        /**
          * The filters selected to limit the search results displayed.
          */
         selectedFilters: {
@@ -221,6 +241,10 @@ Example:
         }
 
       },
+
+      _computeItem: function(items, id){
+        return this.getItem(id, true);  // return the cached item
+      }
 
       /**
        * Caches an item in the current result set specified by id to localstorage

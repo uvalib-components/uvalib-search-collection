@@ -222,6 +222,16 @@ Example:
 
       },
 
+      /**
+       * Caches an item in the current result set specified by id to localstorage
+       *
+       * @param {String} id
+       */
+      cacheItem: function(id){
+        var item = this.getItem(id);
+        if (item) localStorage.['uvalib-search-collection:'+id] = JSON.stringify(item);
+      },
+
       _computeErrors: function(){
         if (this._lastCatalogError || this._lastArticlesError) {
           return {articles:this._lastArticlesError,
@@ -351,9 +361,14 @@ Example:
        * Get an item's details
        *
        * @param {String} id - The unique identifier for the catalog or article item.
+       * @param {Boolean} cached - Should localstorage be used to look for cached items if item is not in the items array?
        */
-      getItem: function(id){
-        return _.find(this.items, {'id':id});
+      getItem: function(id, cached){
+        var item = _.find(this.items, {'id':id});
+        if (!item && cached) {
+          var cache = localStorage.getItem('uvalib-search-collection:'+id);
+          if (cache) item = JSON.parse(cache);
+        }
       },
 
       /**

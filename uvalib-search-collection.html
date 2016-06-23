@@ -316,7 +316,7 @@ Example:
        */
       _catalogResponse: function(){
         this._filtersJoin(this.$.catalog.getFilters());
-        this._itemsJoin(this.catalogItems);
+        this._itemsJoin( _.map(this.catalogItems, function(o){o.source="catalog"; return o;}) );
       },
 
       /**
@@ -325,7 +325,7 @@ Example:
        */
       _articlesResponse: function(){
         this._filtersJoin(this.$.articles.getFilters());
-        this._itemsJoin(this.articleItems);
+        this._itemsJoin( _.map(this.articleItems, function(o){o.source="articles"; return o;}) );
       },
 
       /**

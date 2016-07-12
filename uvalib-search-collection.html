@@ -378,7 +378,7 @@ Example:
        * When the items are changed, update the `count`.
        */
       _itemsChanged: function() {
-        this.count = this.$.catalog.count + this.$.articles.count;
+        this._setCount( this.$.catalog.count||0 + this.$.articles.count||0 );
       },
 
       /**

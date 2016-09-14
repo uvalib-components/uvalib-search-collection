@@ -1,0 +1,458 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../uvalib-catalog/uvalib-catalog.html">
+<link rel="import" href="../uvalib-articles/uvalib-articles.html">
+<link rel="import" href="../uvalib-helper-libs/lodash.html">
+
+<!--
+An element that merges faceted searches of articles and catalog from Virgo.
+
+Example:
+
+    <uvalib-search-collection></uvalib-search-collection>
+
+Example:
+
+    <uvalib-search-collection auto></uvalib-search-collection>
+
+@demo demo/index.html
+@hero hero.svg
+-->
+
+<dom-module id="uvalib-search-collection">
+  <template>
+    <uvalib-catalog item-id="{{itemId}}" rows="{{rows}}" debounce-duration="[[debounceDuration]]" query="[[query]]" id="catalog" auto="{{auto}}" items="{{catalogItems}}" on-response="_catalogResponse" loading="{{catalogLoading}}" last-error="{{_lastCatalogError}}"></uvalib-catalog>
+    <uvalib-articles item-id="{{itemId}}" rows="{{rows}}" debounce-duration="[[debounceDuration]]" query="[[query]]" id="articles" auto="{{auto}}" items="{{articleItems}}" on-response="_articlesResponse" loading="{{articlesLoading}}" last-error="{{_lastArticlesError}}"></uvalib-articles>
+  </template>
+
+  <script>
+  (function() {
+    Polymer({
+      is: 'uvalib-search-collection',
+
+      properties: {
+        activeRequests: {
+          type: Array,
+          notify: true,
+          readOnly: true,
+          value: function() {
+            return [];
+          }
+        },
+
+        /**
+         * If true, automatically performs an Ajax request when either `url` or
+         * `params` changes.
+         */
+        auto: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * Length of time in milliseconds to debounce multiple automatically generated requests.
+         */
+        debounceDuration: {
+          type: Number,
+          value: 0,
+          notify: true
+        },
+
+        /**
+         * Filter definition for facet search
+         */
+
+        filters: {
+          type: Array,
+          notify: true,
+          value:  function(){ return []}
+        },
+
+        /**
+         * The combined items from the both Catalog and Article requests.
+         */
+        items: {
+          type: Array,
+          notify: true,
+          readOnly: true
+        },
+
+        /**
+         * The items from the Catalog request.
+         */
+        catalogItems: {
+          type: Array,
+          notify: true
+        },
+
+        /**
+         * The items from the Article request.
+         */
+        articleItems: {
+          type: Array,
+          notify: true
+        },
+
+        /**
+         * Total number of results in the last response ***(not just the returned rows)***
+         */
+        count: {
+          type: Number,
+          notify: true,
+          readOnly: true
+        },
+
+        /**
+         * The query string of the search
+         */
+        query: {
+          type: String,
+          notify: true,
+          value: "",
+          observer: "_queryChanged"
+        },
+
+        /**
+         * Set the timeout flag on the request.
+         */
+        timeout: {
+          type: Number,
+          value: 0
+        },
+
+        /**
+         * If true, error messages will automatically be logged to the console.
+         */
+        verbose: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * True while lastRequest is in flight.
+         */
+        loading: {
+          type: Boolean,
+          notify: true,
+          computed: '_either(catalogLoading,articlesLoading)'
+        },
+
+        /**
+         * True while the last catalog request is in flight.
+         */
+        catalogLoading: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * True while last article request is in flight.
+         */
+        articlesLoading: {
+          type: Boolean,
+          value: false
+        },
+
+        _lastCatalogError: {
+          type: Object,
+          notify: true
+        },
+        _lastArticlesError: {
+          type: Object,
+          nodify: true
+        },
+
+        /**
+         * lastRequest's error, if any.
+         *
+         * @type {Object}
+         */
+        lastError: {
+          type: Object,
+          notify: true,
+          computed: '_computeErrors(loading)'
+        },
+
+
+        /**
+         * The number of rows to return to items.
+         */
+        rows: {
+          type: Number,
+//          notify: true,
+          value: 20,
+          observer: '_rowsChanged'
+        },
+
+        /**
+         * The page of results to return to items.
+         */
+        page: {
+          type: Number,
+          notify: true,
+          value: 1,
+          observer: '_pageChanged'
+        },
+
+        /**
+         * The base url used to make requests to the catalog. ***This should change when we are no longer using the proxy for CORS support***
+         */
+        _url: {
+          type: String,
+          value: "http://api.library.virginia.edu/"
+        },
+
+        /**
+         * Items from one of the search sources.
+         */
+        _items: {
+          type: Array,
+          value: [],
+          observer: "_itemsChanged"
+        },
+
+        /**
+         * The id of the item
+         */
+        itemId: {
+          type: String,
+          value: null
+        },
+
+        /**
+         * The first item returned from the Search Collection request items array
+         *
+         * @type {Object}
+         */
+        item: {
+          type: Object,
+          notify: true,
+          readOnly: true,
+          computed: "_computeItem(itemId)"
+        },
+
+        /**
+         * The filters selected to limit the search results displayed.
+         */
+        selectedFilters: {
+          type: Object,
+          value: {},
+          notify: true,
+          observer: "_selectedFiltersChanged"
+        }
+
+      },
+
+      _computeItem: function(itemId){
+        return this.getItem(itemId, true);  // return the cached item
+      },
+
+      /**
+       * Caches an item in the current result set specified by id to localstorage
+       *
+       * @param {String} id
+       */
+      cacheItem: function(id){
+        var item = this.getItem(id);
+        if (item) localStorage['uvalib-search-collection:'+id] = JSON.stringify(item);
+      },
+
+      _computeErrors: function(){
+        if (this._lastCatalogError || this._lastArticlesError) {
+          return {articles:this._lastArticlesError,
+                  catalog:this._lastCatalogError};
+        }
+        else {
+          return null;
+        }
+      },
+
+      /**
+       * Returns the boolean result for **a OR b**.
+       *
+       * @param {Boolean} a
+       * @param {Boolean} a
+       */
+      _either: function(a,b){
+        return (a || b);
+      },
+
+      _handleError: function(){
+        this.fire('error');
+      },
+
+      _handleRequest: function(){
+        this.fire('request');
+      },
+
+      _handleResponse: function(){
+        this.fire('response');
+      },
+
+      /**
+       * Update the AJAX query API parameter when the query property is changed.
+       */
+      _queryChanged: function(){
+        if (this._params) {
+          this.set('_params.q', this.query);
+        }
+      },
+
+      /**
+       * Update the AJAX page API parameter when the page property is changed.
+       */
+      _pageChanged: function() {
+        // Make sure a negative value does not occur.
+        if (this.page < 0) {
+          this.page = 0;
+        }
+        if (this._params) {
+          this.set('_params.page', this.page);
+        }
+      },
+
+      /**
+       * When the catalog search returns a response, incorporate the results into the
+       * `items` and `filters`.
+       */
+      _catalogResponse: function(){
+        this._filtersJoin(this.$.catalog.getFilters());
+        this._itemsJoin( _.map(this.catalogItems, function(o){o.source="catalog"; return o;}) );
+      },
+
+      /**
+       * When the article search returns a response, incorporate the results into the
+       * `items` and `filters`.
+       */
+      _articlesResponse: function(){
+        this._filtersJoin(this.$.articles.getFilters());
+        this._itemsJoin( _.map(this.articleItems, function(o){o.source="articles"; return o;}) );
+      },
+
+      /**
+       * Combine the filters returned from the searches so that a filter only appears once
+       * and sort the filters such that those that are most frequent are at the top.
+       *
+       * @param {Array} fltrs
+       */
+      _filtersJoin: function(fltrs){
+        if (fltrs) {
+          fltrs.forEach(function(filt){
+            var filter = _.find(this.filters,{id:filt.id});
+            if (filter) {
+              // found a matching filter, combine values
+              filt.values.forEach(function(val){
+                var value = _.find(filter.values,{id:val.id});
+                if (value) {
+                  value.count = value.count+val.count;
+                } else {
+                  filter.values.push(val);
+                }
+              }, this);
+              // sort values now
+              filter.values = _.orderBy(filter.values, 'count', 'desc');
+            } else {
+              this.push('filters', filt);
+            }
+          }, this);
+        }
+      },
+
+      /**
+       * Join the catalog and article search results to populate the `items`.
+       *
+       * @param {Array} items - The items from an API search call.
+       */
+      _itemsJoin: function(items){
+        // come up with a better way to join these!!!!
+        // something like this:
+        // get ratio and inject smaller set into larger
+        // keeping a buffer for the next page of results
+        // after the buffer reaches a limit then start skipping page requests
+        // until it comes back down.
+        this._items = this._items.concat(items).slice(0,this.rows);
+        if (!this.loading)
+          this._setItems(this._items);
+      },
+
+      /**
+       * When the items are changed, update the `count`.
+       */
+      _itemsChanged: function() {
+        this._setCount( this.$.catalog.count||0 + this.$.articles.count||0 );
+      },
+
+      /**
+       * Get an item's details
+       *
+       * @param {String} id - The unique identifier for the catalog or article item.
+       * @param {Boolean} cached - Should localstorage be used to look for cached items if item is not in the items array?
+       */
+      getItem: function(id, cached){
+        var item = _.find(this.items, {'id':id});
+        if (!item && cached) {
+          var cache = localStorage.getItem('uvalib-search-collection:'+id);
+          if (cache) item = JSON.parse(cache);
+        }
+        return item;
+      },
+
+      /**
+       * Generate an AJAX request to get catalog and article items based on the query.
+       */
+      generateRequest: function(){
+          this._items = [];
+          this.filters = []; //this.items = [];
+          this.$.catalog.generateRequest();
+          this.$.articles.generateRequest();
+      },
+
+      _articleFilterCleanup: function(filters){
+        // if format = Articles then remove as every result matches
+        if (filters.format) {
+          if(typeof filters.format === 'string' || filters.format instanceof String)
+            filters.format = [filters.format];
+          filters.format = _.pull(filters.format, 'Article','article');
+        }
+        return filters;
+      },
+
+      /**
+       * Filters uses to restrict the search results have changed.
+       *
+       * @param {Object} newValue
+       * @param {Object} oldValue
+       */
+      _selectedFiltersChanged: function(newValue, oldValue){
+        if (_.isEmpty(newValue) && _.isEmpty(oldValue)) return;
+        console.log('selected filters changed');
+        var catalog = this.$.catalog,
+            articles = this.$.articles;
+
+        this._items = [];
+        this.filters = [];
+//        if ( catalog.areFiltersAvailable(this.selectedFilters) ) {
+          catalog.selectedFilters = this.selectedFilters;
+//        }
+//        if ( articles.areFiltersAvailable(this.selectedFilters) ) {
+          articles.selectedFilters = this.selectedFilters;
+//        }
+
+      },
+
+      /**
+       * Get the next page of the search results.
+       */
+      more: function() {
+        var rowsRetrieved = (this.page * this.$.catalog.rows) + (this.page * this.$.articles.rows);
+        if (rowsRetrieved < (this.count)) {
+          this.page += 1;
+          if (! this.auto) {
+            this.generateRequest();
+          }
+        }
+      }
+
+    });
+  })();
+  </script>
+</dom-module>

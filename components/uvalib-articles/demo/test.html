@@ -1,0 +1,55 @@
+<!doctype html>
+
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+    <title>uvalib-catalog Demo</title>
+    <script src="../../webcomponentsjs/webcomponents-lite.min.js"></script>
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+    <link rel="import" href="../uvalib-articles.html">
+  </head>
+
+  <body unresolved>
+
+<demo-snippet id="demo">
+  <template>
+
+    <template is="dom-bind">
+
+      <uvalib-articles items="{{items}}" auto rows="20"
+          selected-filters='{"format":["Book"]}'></uvalib-articles>
+
+      <ul>
+        <template is="dom-repeat" items="{{items}}">
+          <li>{{item.title}}</li>
+          </template>
+      </ul>
+
+    </template>
+
+
+  </template>
+</demo-snippet>
+
+<demo-snippet id="demo2">
+  <template>
+
+    <template is="dom-bind">
+
+      <uvalib-articles items="{{items}}" auto rows="20"></uvalib-articles>
+
+      <ul>
+        <template is="dom-repeat" items="{{items}}">
+          <li>{{item.title}}</li>
+          </template>
+      </ul>
+
+    </template>
+
+
+  </template>
+</demo-snippet>
+
+  </body>
+</html>

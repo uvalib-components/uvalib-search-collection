@@ -1,0 +1,177 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-ajax/iron-ajax.html">
+<link rel="import" href="uvalib-catalog.html">
+<link rel="import" href="../uvalib-helper-libs/lodash.html">
+
+<!--
+An element used to interface with the UVa Library Catalog Firehose api to get item availability
+
+Example:
+
+    <uvalib-catalog-availability itemId="008923770"></uvalib-catalog-availability>
+
+@demo demo/available.html
+@hero hero.svg
+-->
+
+<dom-module id="uvalib-catalog-availability">
+  <template>
+    <iron-ajax id="ajax" auto loading="{{_availabilityLoading}}"
+          timeout="{{timeout}}" url="{{_url}}" verbose="{{verbose}}"
+          last-response="{{_lastAvailabilityResponse}}" handle-as="xml"></iron-ajax>
+    <uvalib-catalog verbose="{{verbose}}" timeout="{{timeout}}" loading="{{_catalogLoading}}"
+          item-id="[[itemId]]" item="{{item}}" auto></uvalib-catalog>
+  </template>
+
+  <script>
+  (function() {
+    'use strict';
+
+    Polymer({
+      is: 'uvalib-catalog-availability',
+
+      properties: {
+
+        /**
+         * The id of the item to load
+         */
+        itemId: String,
+
+        /**
+         * The item returned from the Catalog request
+         *
+         * @type {Object}
+         */
+         item: {
+           type: Object,
+           notify: true
+         },
+
+         /**
+          * Is the item holdable
+          */
+         holdable: {
+           type: Boolean,
+           notify: true,
+           computed: '_computeHoldable(_lastAvailabilityResponse)'
+         },
+
+         /**
+          * The holdings of this item by the library
+          * note: each holding could have multiple copies
+          */
+         holdings: {
+           type: Array,
+           notify: true,
+           computed: '_computeholdings(_lastAvailabilityResponse)'
+         },
+
+         /**
+          * True while lastRequest is in flight.
+          */
+         loading: {
+           type: Boolean,
+           notify: true,
+           computed: '_either(_catalogLoading,_availabilityLoading)',
+           readOnly: true
+         },
+
+         _catalogLoading: Boolean,
+         _availabilityLoading: Boolean,
+         _lastAvailabilityResponse: Object,
+
+         /**
+          * Set the timeout flag on the request.
+          */
+         timeout: {
+           type: Number,
+           value: 0
+         },
+
+         /**
+          * The base url used to make requests to the catalog. ***This should change when we are no longer using the proxy for CORS support***
+          */
+         _url: {
+           type: String,
+           computed: '_makeURL(itemId)',
+           readOnly: true
+         },
+
+         /**
+          * If true, error messages will automatically be logged to the console.
+          */
+         verbose: {
+           type: Boolean,
+           value: false
+         },
+
+      },
+
+      _computeHoldable: function(response){
+        if (response) {
+          var canHold = response.querySelector('canHold');
+          return (canHold && canHold.getAttribute('value') != 'no')? true:false;
+        } else return null;
+      },
+
+      _computeholdings: function(response){
+        var holdings = _.filter(response.querySelectorAll('holding'), function(o){return o.getAttribute('shadowed')==="false"});
+        return _.map(holdings,function(holding){
+          var copies = _.filter(holding.querySelectorAll('copy'), function(o){return o.getAttribute('shadowed')==="false"}),
+              library = holding.querySelector('library');
+          return {
+            libraryCode: library.getAttribute('code'),
+            libraryId: library.getAttribute('id'),
+            callNumber: holding.getAttribute('callNumber'),
+            callSequence: holding.getAttribute('callSequence'),
+            holdable: holding.getAttribute('holdable'),
+            copies: _.map(copies, function(o){
+              var currLoc = o.querySelector('currentLocation'),
+                  homeLoc = o.querySelector('homeLocation'),
+                  itemType = o.querySelector('itemType');
+              return {
+                barcode: o.getAttribute('barCode'),
+                circulate: o.querySelector('circulate').textContent === 'y',
+                currentLocation: {
+                  code: currLoc.getAttribute('code'),
+                  id: currLoc.getAttribute('id'),
+                  name: currLoc.querySelector('name').textContent
+                },
+                homeLocation: {
+                  code: homeLoc.getAttribute('code'),
+                  id: homeLoc.getAttribute('id'),
+                  name: homeLoc.querySelector('name').textContent
+                },
+                itemType: {
+                  code: itemType.getAttribute('code'),
+                  id: itemType.getAttribute('id')
+                },
+                lastCheckout: o.querySelector('lastCheckout').textContent
+              };
+            })
+          };
+        });
+      },
+
+      _makeURL: function(id){
+        if (id) {
+          return "https://api.library.virginia.edu/search/catalog/"+id+"/firehose";
+        } else {
+          return null;
+        }
+      },
+
+      /**
+       * Returns the boolean result for **a OR b**.
+       *
+       * @param {Boolean} a
+       * @param {Boolean} a
+       */
+      _either: function(a,b){
+        return (a || b);
+      },
+
+    });
+  })();
+  </script>
+</dom-module>

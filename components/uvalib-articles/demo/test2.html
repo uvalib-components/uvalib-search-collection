@@ -1,0 +1,44 @@
+<!doctype html>
+
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+    <title>uvalib-catalog Demo</title>
+    <script src="../../webcomponentsjs/webcomponents-lite.min.js"></script>
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+    <link rel="import" href="../uvalib-articles.html">
+  </head>
+  <style>
+    ul[data-loading] {opacity: .30;}
+    div.control {margin-bottom: 10px;}
+  </style>
+  <body unresolved>
+<!--
+<demo-snippet id="demo">
+  <template>
+-->
+    <template is="dom-bind" id="app">
+
+      <uvalib-articles id="articles" items="{{items}}" auto loading="{{loading}}"
+          count="{{totalCount}}" selected-filters$="{{selectedFilters}}"></uvalib-articles>
+
+      <ul data-loading$="{{loading}}">
+        <template is="dom-repeat" items="{{items}}">
+          <li>{{item.title}}</li>
+          </template>
+      </ul>
+
+    </template>
+
+<!--
+  </template>
+</demo-snippet>
+-->
+
+    <script>
+      var app = document.querySelector('#app');
+      app.selectedFilters = {'Journal':["nation's restaurant news"],'SourceType':'Reviews', 'SubjectGeographic':'united states'};
+    </script>
+  </body>
+</html>
